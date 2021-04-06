@@ -105,6 +105,7 @@ class ChatServer(port: Int){
       if(user == sendToUserName) user.sendMessage(message)
     }
   }
+
   def checkIfUserAlreadyExist(username: String): Boolean = ???
   def getUserCommandResponse: Unit = ???
   def addUserName(userName: String): Unit = userNames.add(userName)
