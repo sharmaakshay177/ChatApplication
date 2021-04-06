@@ -1,0 +1,16 @@
+
+Actor Provide high level of writing concurrent and distribute systems
+to create a actor
+akka.actor.Actor will give the actor trait
+akka.actor.Props
+akka.event.Logging for logging
+
+when ever you are extending the actor trait
+you need to define the receive method
+which will tell actor what to do when you receive some method
+
+creating an system
+val system = ActorSystem("<actor Name>")
+creating and actor
+val MyActor = system.actorOf(Props[MyActor], name="actorName")
+
