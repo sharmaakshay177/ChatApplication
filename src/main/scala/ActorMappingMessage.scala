@@ -1,15 +1,15 @@
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 
-case class Message(fromUserId: String, toUserId: String, message: String, toUserName: String)
+case class ActorMessage(fromUserId: String, toUserId: String, message: String, toUserName: String)
 case class GetUser(toName: String)
 
 class SendMessage(nameActor: ActorRef) extends Actor{
 
-  var localMessageReference: Message = null
+  var localMessageReference: ActorMessage = null
 
   def receive: Receive ={
-    case (userMap: Map[String, String] ,message: Message) =>
+    case (userMap: Map[String, String] ,message: ActorMessage) =>
       localMessageReference = message
       println("Base Actor starting received the message object")
       nameActor ! (userMap, message.toUserId)
@@ -52,7 +52,7 @@ object ActorMappingMessage extends App{
   val sendMessageActor = ChatSystem.actorOf(Props(new SendMessage(getUsernameActor)), "sendMessageActor")
 
   println("Starting the actor ecosystem")
-  var message = Message("sharmaakshay177", "ls999669", "Hi this is a message from Akshay to Lucky", "")
+  var message = ActorMessage("sharmaakshay177", "ls999669", "Hi this is a message from Akshay to Lucky", "")
   val user = sendMessageActor ! (UserNameMapping, message)
   println(user)
 

@@ -2,8 +2,8 @@ import java.io.{IOException, ObjectInputStream, ObjectOutputStream}
 import java.net.{ServerSocket, Socket}
 
 import Models.{MessageExchange, UserName}
-import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
-
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Timers}
+import scala.concurrent.duration._
 import scala.collection.mutable.{HashMap, HashSet}
 
 case class SendMessageMessage(message: MessageExchange)
@@ -11,7 +11,7 @@ case object StartMessageHandling
 case object HandleClientMessages
 case object ClientExitMessage
 
-class UserActor(socket: Socket, server: MainChatServer) extends Actor{
+class UserActor(socket: Socket, server: MainChatServer) extends Actor with Timers{
 
   private var objectWriter: ObjectOutputStream =_
   private var objectReader: ObjectInputStream =_
@@ -40,9 +40,10 @@ class UserActor(socket: Socket, server: MainChatServer) extends Actor{
       val message = MessageExchange(messageContent = s"New User Connected -> ${username.username}")
       server.broadcast(message, self)
       // sending self message to handle client message objects
-      self ! HandleClientMessages
+      //self ! HandleClientMessages
 
     case HandleClientMessages =>
+      //timers.startTimerAtFixedRate("","timerProcessingMessage", 5.microsecond)
       val clientObjectReceived = objectReader.readObject().asInstanceOf[MessageExchange]
       // will directly check if the passed message is privately send or not
       if (clientObjectReceived.isMessagePrivate){
@@ -110,6 +111,7 @@ class MainChatServer(port: Int){
         // add new User to the mappings
         userActors.add(newUserActor)
         newUserActor ! StartMessageHandling
+        newUserActor ! HandleClientMessages
       }
     }catch {
       case ex: IOException =>

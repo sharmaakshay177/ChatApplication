@@ -31,8 +31,6 @@ object ActorLearning extends App{
   val pinger = system.actorOf(Props[Pinger](), "Pinger")
   val ponger = system.actorOf(Props(classOf[Ponger], pinger), "Ponger")
 
-  import system.dispatcher
-  system.scheduler.scheduleOnce(500 millis){
-    ponger ! Ping
-  }
+  ponger ! Ping
+  system.terminate()
 }

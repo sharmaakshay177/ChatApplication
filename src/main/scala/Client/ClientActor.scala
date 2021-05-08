@@ -4,15 +4,23 @@ import java.io.{IOException, ObjectInputStream, ObjectOutputStream}
 import java.net.{Socket, UnknownHostException}
 
 import Models.{MessageExchange, UserName}
-import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Timers}
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import scala.io.StdIn.readLine
 
 case object StartActors
 case object WriteMessages
 case object ReadMessages
 
-class ReaderActor(socket: Socket, mainChatClient: MainChatClient) extends Actor{
+// https://learning.oreilly.com/library/view/building-applications-with/9781786461483/ch08s06.html
+// https://blog.knoldus.com/a-simple-remote-chat-application-using-lift-comet-and-akka-actor-in-scala/
+// 
+
+
+class ReaderActor(socket: Socket, mainChatClient: MainChatClient) extends Actor with Timers{
+  import context._
   private var objectReader: ObjectInputStream =_
 
   override def preStart(): Unit ={
@@ -24,13 +32,17 @@ class ReaderActor(socket: Socket, mainChatClient: MainChatClient) extends Actor{
   }
 
   override def receive: Receive ={
-    case StartActors =>
-      self ! ReadMessages
+//    case StartActors =>
+//      self ! ReadMessages
     case ReadMessages =>
+      //timers.startTimerAtFixedRate("","timerProcessingMessage", 10.microsecond)
       val messageObject = objectReader.readObject().asInstanceOf[MessageExchange]
-      println("\n" + messageObject.messageContent)
+      println(messageObject.messageContent)
       //if(!mainChatClient.getUserName.isEmpty) println(s"[Type Message ${mainChatClient.getUserName}]:")
-      self ! ReadMessages
+//      val writeMessageActor = this.context.child("writerActor") match {
+//        case Some(actorRef) => actorRef
+//      }
+      //self ! ReadMessages
   }
 
 }
@@ -52,9 +64,10 @@ class WriterActor(socket: Socket, mainChatClient: MainChatClient, readerActorRef
       val userName = readLine("Enter Your Name")
       objectWriter.writeObject(UserName(userName))
       mainChatClient.setUserName(userName)
-      self ! WriteMessages
+      //self ! WriteMessages
 
     case WriteMessages =>
+      readerActorRef ! ReadMessages
       val text = readLine(s"[${mainChatClient.getUserName}: Type Message]")
 
       if(text.equals("Bye") || text.equals("bye")) self ! "Bye"
@@ -93,8 +106,13 @@ class MainChatClient(hostname: String, port: Int){
       val clientSystem = ActorSystem("ClientSystem")
       val readActor = clientSystem.actorOf(Props(new ReaderActor(socket, this)), "readActor")
       val writeActor = clientSystem.actorOf(Props(new WriterActor(socket, this, readActor)), "writerActor")
-      readActor ! StartActors
+      // actor starting
+      // readActor ! StartActors
       writeActor ! StartActors
+      // actor working
+      implicit val executionContext: ExecutionContext = clientSystem.dispatcher
+      clientSystem.scheduler.scheduleAtFixedRate(10.millis, 50.millis, readActor, ReadMessages)
+      writeActor ! WriteMessages
 
     } catch {
       case ex: UnknownHostException => println(s"Server not Found ${ex.getMessage}")
